@@ -1,0 +1,35 @@
+name: Build Android APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - 'scenes/**'
+      - 'scripts/**'
+      - 'assets/**'
+      - '.github/workflows/build-android.yml'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.4.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare debug keystore and build directory
+        run: |
+          mkdir -p ~/.android build
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkeypair -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=Android Debug,O=Android,C=US'
+          fi
+      - name: Import project
+        run: godot --headless --editor --path . --import --quit
+      - name: Export Android debug APK
+        run: godot --headless --path . --export-debug Android build/LigaNusantara3D-debug.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LigaNusantara3D-Android-debug
+          path: build/LigaNusantara3D-debug.apk
+          if-no-files-found: error
